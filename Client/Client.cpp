@@ -6,8 +6,8 @@
 #include "Capcom.h"
 #include "CapcomResource.h"
 #include "LockedMemory.h"
-#include "Common/RagCommon.h"
-#include "Common/Misc.h"
+#include "Common/Common.h"
+#include "Common/Utils.h"
 
 #define SystemModuleInformation 0xB
 #define CIPATH "%SYSTEMROOT%\\System32\\ci.dll"
@@ -28,6 +28,33 @@ using handle_smart = my_unique_ptr<std::remove_pointer<HANDLE>::type,
 																	 CloseHandle>;
 
 __declspec(align(4096)) char g_pageToMap[4096 * 100] = "HexhexD";
+
+class CommandLine {
+public:
+  CommandLine(int &argc, char **argv) {
+    for (int i = 1; i < argc; ++i)
+      this->tokens.push_back(std::string(argv[i]));
+  }
+  /// @author iain
+  const std::string &getCmdOption(const std::string &option) const {
+    std::vector<std::string>::const_iterator itr;
+    itr = std::find(this->tokens.begin(), this->tokens.end(), option);
+    if (itr != this->tokens.end() && ++itr != this->tokens.end()) {
+      return *itr;
+    }
+    static const std::string empty_string("");
+    return empty_string;
+  }
+  /// @author iain
+  bool flagExist(const std::string &option) const {
+    return std::find(this->tokens.begin(), this->tokens.end(), option) !=
+           this->tokens.end();
+  }
+
+private:
+  std::vector<std::string> tokens;
+};
+
 
 std::string getTempDirPath() {
 	char TempPath[MAX_PATH];
@@ -234,20 +261,23 @@ bool exploit() {
 }
 
 int main(int argc, const char *argv[]) {
+	CommandLine cl(argc, (char **)argv);
+
 	printf("Setting working set size\n");
-	if (SetProcessWorkingSetSizeEx(GetCurrentProcess(), 1000000, 1000000, QUOTA_LIMITS_HARDWS_MAX_DISABLE) == 0)
+	if (SetProcessWorkingSetSizeEx(GetCurrentProcess(), 1000'000, 1000'000, QUOTA_LIMITS_HARDWS_MAX_DISABLE) == 0)
 		return lastError("Failed to set working set size");
 	if (!lockRange()) {
 		printf("Lock CODE in memory failed, abort\n");
 		exit(999);
 	}
+
 	if (!VirtualLock(g_pageToMap, sizeof(g_pageToMap))) {
 		return lastError("Lock DATA in memory failed, abort");
 	}
 
-	if (argc >= 2 && strstr(argv[1], "-load")) {
+	if (cl.flagExist("-load")) {
 		exploit();
-	} else if(argc >= 2 && strstr(argv[1], "-test")) {
+	} else if (cl.flagExist("-test")) {
 		CPUIDStuff();
 	} else {
 		// openDeviceAndMapPhyiscalToTarget(argc, argv);

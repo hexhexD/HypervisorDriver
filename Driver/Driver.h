@@ -55,7 +55,7 @@ typedef struct DeviceContext
 	PMMPTE ModifiedPTE;
 } DeviceContext;
 
-#define log(fmt, ...) KdPrint(("[RagDriver] (%s) " fmt, __func__, __VA_ARGS__))
+#define Log(fmt, ...) KdPrint(("Hyperdriver: " fmt, __VA_ARGS__))
 
 #define getDeviceContext(DeviceObject) ((DeviceContext*)DeviceObject->DeviceExtension)
 
